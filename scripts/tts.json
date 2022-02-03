@@ -1,0 +1,26 @@
+{
+    "female": [
+        {
+            "dirname": "glow_ckp",
+            "uri": "",
+            "filesize": ""
+        },
+        {
+            "dirname": "hifi_ckp",
+            "uri": "",
+            "filesize": ""
+        }
+    ],
+    "male": [
+        {
+            "dirname": "glow_ckp",
+            "uri": "",
+            "filesize": ""
+        },
+        {
+            "dirname": "hifi_ckp",
+            "uri": "",
+            "filesize": ""
+        }
+    ]
+}

@@ -1,0 +1,251 @@
+# This is the hyperparameter configuration file for Tacotron2 v1.
+# Please make sure this is adjusted for the Baker dataset. If you want to
+# apply to the other dataset, you might need to carefully change some parameters.
+# This configuration performs 200k iters but 65k iters is enough to get a good models.
+
+###########################################################
+#                PRE-PROCESSING SETTING
+###########################################################
+# Audio
+num_mels: 80
+num_mgcs: 60
+num_freq: 2049
+sample_rate: 48000
+frame_length_ms: 50.0
+frame_shift_ms: 12.5
+ref_level_db: 20
+average_mel_level_db: [0.0]
+stddev_mel_level_db: [0.0]
+min_mel_level_db: [0.0]
+silence_mel_level_db: -3.0
+
+## MGC
+mgc_dim: 60
+mgc_alpha: 0.77
+mgc_gamma: 0.0
+mgc_fft_len: 4096
+
+## LF0
+num_lf0s: 256
+f0_max: 529.0
+f0_min: 66.0
+lf0_loss_factor: 0.5
+
+###########################################################
+#                FEATURE EXTRACTION SETTING               #
+###########################################################
+hop_size: 256 # Hop size.
+format: "npy"
+
+###########################################################
+#              NETWORK ARCHITECTURE SETTING               #
+###########################################################
+model_type: "tacotron2"
+
+tacotron2_params:
+  dataset: vctk
+  outputs_per_step: 2
+  n_feed_frame: 2
+  
+  ## ---------- Embedding ----------
+  embedding_dim: 256
+  num_symbols: 256
+  source: "phoneme"  # phone, phoneme
+  ## Accent Embedding
+  use_accent_type: False
+  accent_type_embedding_dim: 32
+  num_accent_type: 129
+  accent_type_offset: 0x3100
+  accent_type_unknown: 0x3180
+  accent_type_prenet_out_units: (32, 16)
+  encoder_prenet_out_units_if_accent: (224, 112)
+  ## Speaker Embedding
+  use_speaker_embedding: False
+  use_external_speaker_embedding: False # use speaker embeddings from an external file
+  speaker_embedding_projection_out_dim: -1 # (optional) project speaker embedding to a different dimension before using it
+  embedding_file: ""
+  num_speakers: 1
+  speaker_embedding_dim: 16
+  speaker_embedding_offset: 0
+  speaker_for_synthesis: -1
+  speaker_embedd_to_prenet: true # default (original) speaker embedding location -- prenet to the decoder.
+  speaker_embedd_to_decoder: false # (optional) input speaker embedding to decoder by concatenating spk embedding with encoder outputs
+  speaker_embedd_to_postnet: false # (optional) input speaker embedding to each convolution layers of the postnet
+
+  ## ---------- Encoder  ----------
+  ## v1
+  encoder_version: "v1"
+  encoder: "ZoneoutEncoderV1"
+  encoder_prenet_drop_rate: 0.5
+  cbhg_out_units: 256
+  conv_channels: 128
+  max_filter_width: 16
+  projection1_out_channels: 128
+  projection2_out_channels: 128
+  num_highway: 4
+  encoder_prenet_out_units: [256, 128]
+  ## v2
+  encoder_v2_num_conv_layers: 3
+  encoder_v2_kernel_size: 5
+  encoder_v2_out_units: 512
+  encoder_v2_drop_rate: 0.5
+  ## Self_Attention
+  encoder_self_attention_out_units: 32
+  encoder_self_attention_num_heads: 2
+  encoder_self_attention_num_hop: 1
+  encoder_self_attention_encoder_out_units: 32
+  encoder_self_attention_drop_rate: 0.05
+  encoder_self_attention_transformer_num_conv_layers: 1
+  encoder_self_attention_transformer_kernel_size: 5
+
+  ## ------------ Decoder ------------
+  decoder_version: "v1"
+  decoder: "ExtendedDecoder" # ["ExtendedDecoder", "TransformerDecoder", "DualSourceDecoder", "DualSourceTransformerDecoder", "MgcLf0DualSourceDecoder"]
+  # Dual_Source_Decoder
+  attention_type: ["additive",] # ["additive", "location_sensitive", "forward", "lsa", "teacher_forcing_forward", "teacher_forcing_additive"]
+  use_forced_alignment_mode: false
+  ## V1
+  decoder_prenet_drop_rate: 0.5
+  apply_dropout_on_inference: false
+  decoder_prenet_out_units: (256, 128)
+  attention_out_units: 256
+  decoder_out_units: 256
+  attention1_out_units: 224
+  attention2_out_units: 32
+  ## V2
+  attention_kernel: 31
+  attention_filters: 32
+  cumulative_weights: false
+  ## Forward attention
+  use_forward_attention_transition_agent: false
+  ## Self Attention
+  decoder_self_attention_out_units: 256
+  decoder_self_attention_num_heads: 2
+  decoder_self_attention_num_hop: 1
+  decoder_self_attention_drop_rate: 0.05
+
+  ## Channel encoder
+  channel_id_to_postnet: false ## (optional) input channel labels from a file to the postnet.
+  channel_id_file: ""
+  channel_id_dim: 8
+
+  ## Language Embedding
+  use_language_embedding: false # (optional) use any language or dialect embeddings
+  language_embedding_projection_out_dim: -1 # (optional) project language embedding to a different dimension before using it.
+  language_embedding_file: ""
+  language_embedding_dim: 16
+  language_embedd_to_input: false # (optional) concatenate language embedding with phone/letter embedding inputs
+  language_embedd_to_decoder: false # (optional) input language embedding to decoder by concatenating with encoder outputs
+
+  ## Post net
+  post_net_cbhg_out_units: 256
+  post_net_conv_channels: 128
+  post_net_max_filter_width: 8
+  post_net_projection1_out_channels: 256
+  post_net_projection2_out_channels: 80
+  post_net_num_highway: 4
+
+  ## Post net V2
+  use_postnet_v2: false
+  num_postnet_v2_layers: 5
+  postnet_v2_kernel_size: 5
+  postnet_v2_out_channels: 512
+  postnet_v2_drop_rate: 0.5
+  
+  ## Other embedding
+  use_zoneout_at_encoder: false
+  zoneout_factor_cell: 0.1
+  zoneout_factor_output: 0.1
+
+###########################################################
+#                  DATA LOADER SETTING                    #
+###########################################################
+batch_size: 32 # Batch size for each GPU with assuming that gradient_accumulation_steps == 1.
+remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
+allow_cache: true # Whether to allow cache in dataset. If true, it requires cpu memory.
+mel_length_threshold: 32 # remove all targets has mel_length <= 32
+is_shuffle: true # shuffle dataset after each epoch.
+# refer (https://github.com/tensorspeech/TensorflowTTS/issues/34#issuecomment-642309118)
+use_fixed_shapes: true # use_fixed_shapes for training (2x speed-up)
+
+# Pre-process
+trim_top_db: 30
+trim_frame_length: 1024
+trim_hop_length: 256
+num_silent_frames: 4
+
+###########################################################
+#             OPTIMIZER & SCHEDULER SETTING               #
+###########################################################
+optimizer_params:
+  initial_learning_rate: 0.001
+  end_learning_rate: 0.00001
+  decay_steps: 150000 # < train_max_steps is recommend.
+  warmup_proportion: 0.02
+  weight_decay: 0.001
+
+gradient_accumulation_steps: 1
+# trainable variable expr (eg. 'embeddings|decoder_cell' )
+# must separate by |. if var_train_expr is null then we training all variable
+var_train_expr: null 
+###########################################################
+#                    INTERVAL SETTING                     #
+###########################################################
+train_max_steps: 200000 # Number of training steps.
+save_interval_steps: 5000 # Interval steps to save checkpoint.
+eval_interval_steps: 500 # Interval steps to evaluate the network.
+log_interval_steps: 100 # Interval steps to record the training log.
+start_schedule_teacher_forcing: 200001 # don't need to apply schedule teacher forcing.
+start_ratio_value: 0.5 # start ratio of scheduled teacher forcing.
+schedule_decay_steps: 50000 # decay step scheduled teacher forcing.
+end_ratio_value: 0.0 # end ratio of scheduled teacher forcing.
+
+# Training parameter
+adam_beta1: 0.9
+adam_beta2: 0.999
+adam_eps: 1e-8
+initial_learning_rate: 0.002
+decay_learning_rate: true
+learning_rate_step_factor: 1
+use_l2_regularization: false
+l2_regularization_weight: 1e-7
+save_summary_steps: 100
+save_checkpoints_steps: 500
+keep_checkpoint_max: 200
+keep_checkpoint_every_n_hours: 1 # deprecated
+log_step_count_steps: 1
+alignment_save_steps: 10000
+save_training_time_metrics: false
+approx_min_target_length: 100
+suffle_buffer_size: 64
+batch_bucket_width: 50
+batch_num_buckets: 50
+interleave_cycle_length_cpu_factor: 1.0
+interleave_cycle_length_min: 4
+interleave_cycle_length_max: 16
+interleave_buffer_output_elements: 200
+interleave_prefetch_input_elements: 200
+prefetch_buffer_size: 4
+use_cache: false
+cache_file_name: null
+logfile: "log.txt"
+record_profile: false,
+profile_steps: 50
+# Warm starting
+warm_start: false
+ckpt_to_initialize_from: null
+vars_to_warm_start: [".*"]
+
+###########################################################
+#                     OTHER SETTING                       #
+###########################################################
+spec_loss_type: "l1"  # l1 or mse
+num_save_intermediate_results: 1 # Number of results to be saved as intermediate results.
+max_iters: 500
+num_evaluation_steps: 64
+keep_eval_results_max_epoch: 10
+eval_start_delay_secs: 120
+eval_throttle_secs: 600
+
+predicted_mel_extension: "mfbsp"
+

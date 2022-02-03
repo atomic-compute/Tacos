@@ -1,0 +1,6 @@
+TODO (For TTS)
+- Rewrite loss function for self-attention tacotron network -- Doing
+- Print graph and execute with 1 epoch -- Doing
+- Convert old TF model to TF2 
+- Train for hindi language i.e. hindi text -> English speech
+- Fix setup.py and predict method
