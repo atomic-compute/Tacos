@@ -37,9 +37,10 @@ def prepare_row(wav):
     if file_id not in TEXT_MAP:
         return None
 
-    if mic_num == "mic2" and \
-            Path(wav).parent.joinpath(
-                ac_wavefname.replace("mic2", "mic1")).exists():
+    if mic_num == "mic2" and (
+        Path(wav).parent.
+        joinpath(ac_wavefname.replace("mic2", "mic1")).exists()
+    ):
         return None
 
     output = easydict.EasyDict({
@@ -57,10 +58,10 @@ def main():
     global SPEAKER_MAP, TEXT_MAP, SRC_DIRPATH
     argv = parse_args()
     SRC_DIRPATH = Path(argv.source_dir)
-    textfiles = glob.glob(str(SRC_DIRPATH.joinpath("txt/**/*.txt")))
-    wavs = glob.glob(str(SRC_DIRPATH.joinpath("wav48_silence_trimmed/**/*.flac")))
-
-    with open(SRC_DIRPATH.joinpath(argv.in_fname), 'r') as fp:
+    textfiles = glob.glob(str(SRC_DIRPATH / "txt/**/*.txt"))
+    wavs = glob.glob(str(SRC_DIRPATH / "wav48_silence_trimmed/**/*.flac"))
+    inp_fname = SRC_DIRPATH / argv.in_fname  # type: Path
+    with inp_fname.open('r') as fp:
 
         next(fp)
 
@@ -79,8 +80,8 @@ def main():
     rows = [prepare_row(wav) for wav in wavs]
     rows = [row for row in rows if row]
     keys = rows[0].keys()
-    out_fname = Path(argv.source_dir).joinpath(argv.out_fname)
-    with open(out_fname, 'w') as fp:
+    
+    with Path(argv.source_dir, argv.out_fname).open('w') as fp:
         dict_writer = csv.DictWriter(fp, keys)
         dict_writer.writeheader()
         dict_writer.writerows(rows)

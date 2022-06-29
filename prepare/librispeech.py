@@ -50,19 +50,17 @@ def main():
     SRC_DIRECTORY = Path(argv.source_dir)
     datadirs = ["train-clean-100", "dev-clean", "test-clean"]
     
-    assert all(map(lambda subdir: os.path.exists(
-        SRC_DIRECTORY.joinpath(subdir)), datadirs)), FileExistsError("Not all file exists")
+    assert all(map(lambda subdir: (SRC_DIRECTORY / subdir).exists(), datadirs)), \
+        FileExistsError("Not all file exists")
     textfiles = []
     wavs = []
     
     for directory in datadirs:
-        textfiles += glob.glob(str(SRC_DIRECTORY.joinpath(
-            f"{directory}/**/**/*.txt")))
+        textfiles += glob.glob(str(SRC_DIRECTORY / f"{directory}/**/**/*.txt"))
         
-        wavs += glob.glob(str(SRC_DIRECTORY.joinpath(
-            f"{directory}/**/**/*.flac")))
+        wavs += glob.glob(str(SRC_DIRECTORY / f"{directory}/**/**/*.flac"))
 
-    with open(SRC_DIRECTORY.joinpath(argv.in_fname), 'r') as fp:
+    with (SRC_DIRECTORY / argv.in_fname).open('r') as fp:
         next(fp)
 
         for line in fp:
@@ -85,8 +83,8 @@ def main():
     rows = [row for row in rows if row]
 
     keys = rows[0].keys()
-    out_fname = SRC_DIRECTORY.joinpath(argv.out_fname)
-    with open(out_fname, 'w') as fp:
+    out_fname = SRC_DIRECTORY / argv.out_fname  # type: Path
+    with out_fname.open('w') as fp:
         dict_writer = csv.DictWriter(fp, keys)
         dict_writer.writeheader()
         dict_writer.writerows(rows)

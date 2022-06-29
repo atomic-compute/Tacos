@@ -18,7 +18,7 @@ from tensorflow_tts.utils import calculate_2d_loss, calculate_3d_loss, return_st
 from deepinsight_speech.synthesizer.modules.losses import ComputeWeightedLoss
 from deepinsight_speech.synthesizer.modules.metrics import MetricsSaver
 from deepinsight_speech.apps.selfattention_tacotron2.dataset import CharactorMelDataset
-from deepinsight_speech.synthesizer.backbones.selfattend_tacotron import (
+from deepinsight_speech.synthesizer.backbones.tacotronv2 import (
     TacotronAttentionModel,
     MgcLf0TacotronModel,
     ExtendedTacotronV1Model,
@@ -31,11 +31,11 @@ from tensorflow.keras.losses import BinaryCrossentropy, CategoricalCrossentropy,
 
 
 @dataclasses.dataclass(frozen=True)
-class pair:
+class trainer_model_cls:
     """Pair of model-class and trainer-class
     """
-    model_cls: TacotronAttentionModel
-    trainer_cls: Seq2SeqBasedTrainer
+    model: TacotronAttentionModel
+    trainer: Seq2SeqBasedTrainer
 
 
 @add_metaclass(ABCMeta)
@@ -122,6 +122,7 @@ class SelfAttentionTacotronTrainer(Seq2SeqBasedTrainer):
         the training progress slower on my experiment. Note that input_signature
         is apply on based_trainer by default.
         """
+        # from tensorflow_tts.optimizers import GradientAccumulator
         if self._already_apply_input_signature is False:
             self.one_step_forward = tf.function(
                 self._one_step_forward, experimental_relax_shapes=True
@@ -375,14 +376,25 @@ class MgcLf0TacotronTrainer(SelfAttentionTacotronTrainer):
 
 
 _TACO_TRAINER = {
-    'extendedv1': pair(ExtendedTacotronV1Model,
-                       ExtendedTacotronV1Trainer),
-    'mgclf0': pair(MgcLf0TacotronModel,
-                   MgcLf0TacotronTrainer),
-    'dualsource_atten': pair(DualSourceSelfAttentionTacotronModel,
-                             DualSourceSelfAttentionTacotronTrainer),
-    'dualsource_atten_mgclf0': pair(DualSourceSelfAttentionMgcLf0TacotronModel,
-                                    DualSourceSelfAttentionMgcLf0TacotronTrainer)
+    'extendedv1': trainer_model_cls(
+        ExtendedTacotronV1Model,
+        ExtendedTacotronV1Trainer
+    ),
+
+    'mgclf0': trainer_model_cls(
+        MgcLf0TacotronModel,
+        MgcLf0TacotronTrainer
+    ),
+
+    'dualsource_atten': trainer_model_cls(
+        DualSourceSelfAttentionTacotronModel,
+        DualSourceSelfAttentionTacotronTrainer
+    ),
+
+    'dualsource_atten_mgclf0': trainer_model_cls(
+        DualSourceSelfAttentionMgcLf0TacotronModel,
+        DualSourceSelfAttentionMgcLf0TacotronTrainer
+    )
 }
 
 
@@ -525,20 +537,20 @@ def main(
     # ##===================================
     iterator = train_dataset.batch(1).as_numpy_iterator()
     data = iterator.next()
-    
-    model_cls, trainer_cls = _TACO_TRAINER[taco_name].model_cls, _TACO_TRAINER[taco_name].trainer_cls
+
+    model_cls, trainer_cls = _TACO_TRAINER[taco_name].model, _TACO_TRAINER[taco_name].trainer
     trainer = trainer_cls(
         config=config,
         strategy=STRATEGY,
         steps=0,
         epochs=0,
         is_mixed_precision=mixed_precision,
-    )
+    )  # type: Seq2SeqBasedTrainer
 
     with STRATEGY.scope():
         # define model.
         tacotron_config = Tacotron2Config(**config["tacotron2_params"])
-        tacotron2 = model_cls(config=tacotron_config, name="selfattention-tacotron2")
+        tacotron2 = model_cls(config=tacotron_config, name="selfattention-tacotron2")  # type: TacotronAttentionModel
         tacotron2._build()
         tacotron2.summary()
 
